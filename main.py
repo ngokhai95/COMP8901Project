@@ -8,6 +8,7 @@ from sklearn.model_selection import train_test_split
 from sklearn import metrics
 from sklearn.tree import export_graphviz
 from sklearn.externals.six import StringIO
+from IPython.display import Image
 import pydotplus
 
 # GAME LOGIC
@@ -51,6 +52,7 @@ toActivate = ""
 toPosition = ""
 Attack = ""
 toAttack = ""
+aiChoice = ""
 
 class Card(object):
     def __init__(self, name=None, type=None, archetype=None, effect=None, attack=None, defense=None, level=None, position=None):
@@ -165,9 +167,9 @@ def MainPhase(playerHand,playerField,playerGrave,aiHand,aiField,aiGrave,turn):
                     else:
                         actions[choice](playerHand,playerField,playerGrave,turn)
         if (turn == "AI"):
-            if (aiTribute == 1):
+            if (aiChoice == "tribute"):
                 choice = "tribute"
-            elif(aiSum == 1):
+            elif(aiChoice == "summon"):
                 choice = "summon"
             elif (aiBattle == 1):
                 choice = "battle"
@@ -296,6 +298,7 @@ def BattlePhase(attackField,attackGrave,defenseField,defenseGrave, turn):
 def normalSummon(hand, field, grave, turn):
     global numSum
     global aiSum
+    global aiChoice
     summon = ""
     position = ""
     global sum
@@ -307,6 +310,7 @@ def normalSummon(hand, field, grave, turn):
     if (sum == 1 or i == 0):
         print("No Normal Summon can be performed")
         aiSum = 0
+        aiChoice = ""
     else:
         if (turn == "Player"):
             summon = input("Chose card to Summon: ")
@@ -383,6 +387,7 @@ def activateSpell(ownHand,ownField,ownGrave,oppHand,oppField,oppGrave,turn):
 def tributeSummon(hand, field, grave, turn):
     global numSum
     global aiTribute
+    global aiChoice
     summon = ""
     position = ""
     tribute = ""
@@ -398,6 +403,7 @@ def tributeSummon(hand, field, grave, turn):
     if (sum == 1 or i == 0):
         print("No Tribute Summon can be performed")
         aiTribute = 0
+        aiChoice = ""
     else:
         if (turn == "Player"):
             summon = input("Chose card to Summon: ")
@@ -453,6 +459,7 @@ def newTurn(playerHand,playerField,playerGrave,aiHand,aiField,aiGrave,turn):
     global end
     global spell
     global battle
+    global aiChoice
     sum = 0
     end = 0
     spell = 0
@@ -472,6 +479,7 @@ def newTurn(playerHand,playerField,playerGrave,aiHand,aiField,aiGrave,turn):
     toPosition = ""
     Attack = ""
     toAttack = ""
+    aiChoice = ""
     if(turn == "Player"):
         print("Player Life Points:",playerLife)
     else:
@@ -692,6 +700,7 @@ def actionMaking(hand,grave,field,turn):
     global aiTribute
     global aiSpell
     global aiEnd
+    global aiChoice
     control = 0
     for fieldcard in field:             #Summon boss monster when ever possible
         control = control + 1
@@ -699,9 +708,12 @@ def actionMaking(hand,grave,field,turn):
         if (isinstance(checkcard.level, int) and checkcard.level > 9 and control > 0):
             aiTribute = 1
             aiSum = 0
+            aiChoice = "tribute"
             rulebasedSystem(hand,field,grave,playStyle)
+            break
         if (isinstance(checkcard.level, int) and checkcard.level < 9 and aiTribute == 0):
             aiSum = 1
+            aiChoice = "summon"
             rulebasedSystem(hand,field,grave,playStyle)
         if (checkcard.effect != None):
             aiSpell = 1
@@ -719,6 +731,7 @@ def rulebasedSystem(hand, field, grave, playStyle):
     global toTribute
     global toActivate
     global toPosition
+    global aiChoice
     minAtk = 5000
     maxAtk = 0
     maxDef = 0
@@ -743,7 +756,7 @@ def rulebasedSystem(hand, field, grave, playStyle):
     #Prioritize tribute for boss monster with lowest attack monster whenever possible
     
     if(playStyle == "Aggressive"):
-        if(aiTribute == 1):                 
+        if(aiChoice == "tribute"):                 
             control = 0
             for fieldcard in field:             #Summon boss monster when ever possible
                 control = control + 1
@@ -755,7 +768,7 @@ def rulebasedSystem(hand, field, grave, playStyle):
                             toTribute = checkfield.name
             toPosition = "attack"
             
-        if(aiSum == 1 and aiTribute == 0):
+        if(aiChoice == "summon"):
             for checkcard2 in hand:                 #Summon the highest attack monster in attack position
                 if (isinstance(checkcard2.level, int) and checkcard2.level < 9):
                     if (checkcard2.attack >= maxAtk):
@@ -770,7 +783,7 @@ def rulebasedSystem(hand, field, grave, playStyle):
     #Prioritize flooding the field with defense position monsters and wait for boss monster to tribute
 
     elif(playStyle == "Passive"):
-        if(aiTribute == 1):
+        if(aiChoice == "tribute"):
             control = 0
             for fieldcard in field:
                 control = control + 1                #Summon boss monster when having 2 or more monster
@@ -781,7 +794,7 @@ def rulebasedSystem(hand, field, grave, playStyle):
                         if (checkfield.attack <= minAtk):
                             toTribute = checkfield.name
             toPosition = "attack"
-        if(aiSum == 1 and aiTribute == 0):
+        if(aiChoice == "summon"):
             for checkcard2 in hand:                    #Summon the highest defense monster in defense position
                 if (isinstance(checkcard2.level, int) and checkcard2.level < 9):
                     if (checkcard2.defense >= maxDef):
@@ -799,7 +812,7 @@ def DecisionTreeBattle(playStyle,threatList):
     global toAttack
     count = 0
     maxAtk = 0
-    for checkmax in aiField:                #getting the max attack monster the AI have
+    for checkmax in aiField:                
         if (maxAtk < checkmax.attack):
             maxAtk = checkmax.attack
     if (playStyle == "Aggressive"):
